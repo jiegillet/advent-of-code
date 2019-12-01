@@ -6,11 +6,11 @@ main = do
   print $ part1 masses
   print $ part2 masses
 
-part1 :: [Double] -> Int
-part1 = floor . sum . map fuel
+part1 :: [Int] -> Int
+part1 = sum . map fuel
 
-part2 :: [Double] -> Int
-part2 = floor . sum . map (sum . tail . takeWhile (>0) . iterate fuel) 
+part2 :: [Int] -> Int
+part2 = sum . map (sum . tail . takeWhile (>0) . iterate fuel)
 
-fuel :: Double -> Double
-fuel m = fromIntegral $ floor (m / 3) - 2
+fuel :: Int -> Int
+fuel m = (m `div` 3) - 2
