@@ -1,4 +1,4 @@
-module Day02 where
+module Day05 where
 
 import Data.Array
 import Control.Monad.State.Strict
@@ -6,11 +6,8 @@ import Control.Monad.State.Strict
 main :: IO ()
 main = do
   ints <- read . (\i ->  "[" ++ i ++ "]") <$> readFile "Day05.txt"
-  -- let ints = [3,0,4,0,99]
   let prog = listArray (0, length ints - 1) ints
       intCode = IntCode 0 prog Position []
-  return ()
-  -- print $ execState (runProgram [100]) intCode
   print $ part1 [1] intCode
   print $ part2 [5] intCode
 
@@ -68,7 +65,7 @@ getMode n = case split n of
               )
     toMode 0 = Position
     toMode 1 = Immediate
-    toMode _ = error "wrong parameter code"
+    toMode n = error "wrong parameter code " ++ show n
 
 getValue :: Mode -> Array Int Int -> Int -> Int
 getValue Position prog i = prog!i
@@ -108,23 +105,23 @@ runProgram inputs = do
     (JumpT, [m1, m2]) -> do
       let i1 = getValue m1 prog (i+1)
           i2 = getValue m2 prog (i+2)
-      if i1 /= 0
-        then modify $ updatePos (const i2)
+      if prog!i1 /= 0
+        then modify $ updatePos (const (prog!i2))
         else modify $ updatePos (+3)
       runProgram inputs
 
     (JumpF, [m1, m2]) -> do
       let i1 = getValue m1 prog (i+1)
           i2 = getValue m2 prog (i+2)
-      if i1 == 0
-        then modify $ updatePos (const i2)
+      if prog!i1 == 0
+        then modify $ updatePos (const (prog!i2))
         else modify $ updatePos (+3)
       runProgram inputs
 
     (LessThan, [m1, m2]) -> do
       let i1 = getValue m1 prog (i+1)
           i2 = getValue m2 prog (i+2)
-      if i1 < i2
+      if prog!i1 < prog!i2
         then modify $ updateProg (// [(prog!(i+3), 1)])
         else modify $ updateProg (// [(prog!(i+3), 0)])
       modify $ updatePos (+4)
@@ -133,7 +130,7 @@ runProgram inputs = do
     (Eq, [m1, m2]) -> do
       let i1 = getValue m1 prog (i+1)
           i2 = getValue m2 prog (i+2)
-      if i1 == i2
+      if prog!i1 == prog!i2
         then modify $ updateProg (// [(prog!(i+3), 1)])
         else modify $ updateProg (// [(prog!(i+3), 0)])
       modify $ updatePos (+4)
