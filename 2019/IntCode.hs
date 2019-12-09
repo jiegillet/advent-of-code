@@ -8,7 +8,7 @@ import           Data.Array
 mkIntCode :: [Integer] -> IntCode
 mkIntCode ints =  IntCode 0 prog [] 0
   where
-    prog = listArray (0, 2^16-1) (ints ++ repeat 0)
+    prog = listArray (0, 2^11-1) (ints ++ repeat 0)
 
 getOutput :: IntCode -> [Integer] -> [Integer]
 getOutput code inputs = reverse $ output $ execState (runProgram inputs) code

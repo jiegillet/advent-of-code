@@ -10,19 +10,19 @@ main = do
   print $ part1 intCode
   print $ part2 intCode
 
-part1 :: IntCode -> Int
+part1 :: IntCode -> Integer
 part1 code = maximum $ map thruster (permutations [0..4])
   where
-    thruster :: [Int] -> Int
+    thruster :: [Integer] -> Integer
     thruster = foldl amplifier 0
 
-    amplifier :: Int -> Int -> Int
+    amplifier :: Integer -> Integer -> Integer
     amplifier out phase = last $ getOutput code [phase, out]
 
-part2 :: IntCode -> Int
+part2 :: IntCode -> Integer
 part2 code = maximum $ map thruster (permutations [5..9])
   where
-    thruster :: [Int] -> Int
+    thruster :: [Integer] -> Integer
     thruster [p1, p2, p3, p4, p5] =
       let o1 = getOutput code (p1 : 0 : o5)
           o2 = getOutput code (p2 : o1)
