@@ -1,13 +1,18 @@
+{-# LANGUAGE TupleSections #-}
+
 module Day10 where
 
-import           Data.Ratio
-import           Data.Set   (Set)
-import qualified Data.Set   as Set
+import Data.List (maximumBy, sort, groupBy, sortOn, transpose)
+import Data.Function (on)
+import Data.Ratio (Ratio, (%))
+import Data.Set (Set, fromList)
+
+type Position = (Int, Int)
 
 data Direction
-  = Up
+  = Center
+  | Up
   | Down
-  | Center
   | Diag Int Int (Ratio Int)
   deriving (Show, Eq, Ord)
 
@@ -19,19 +24,18 @@ main = do
   -- print $ part1 $ lines ex2
   -- print $ part1 $ lines ex3
   print $ part1 asteroids
-  -- print $ part2 masses
+  -- print $ part2 $ lines ex0
+  -- print $ part2 $ lines ex4
+  -- print $ part2 $ lines ex5
+  print $ part2 asteroids
 
-part1 :: [[Char]] -> Int
-part1 asteroids = maximum view
+lineOfSight :: [[Char]] -> [(Int, Position)]
+lineOfSight asteroids = map (\xy -> (count xy, xy)) positions
   where
-    locations = concat $ zipWith rows [0..] asteroids
+    positions = concat $ zipWith rows [0..] asteroids
+    rows y = map ((, y) . fst) . filter ((=='#') . snd) . zip [0..]
 
-    rows y = map (toCoord y) . filter ((=='#') . snd) . zip [0..]
-
-    toCoord y (x, _) = (x, y)
-
-    view = map count locations
-    count xy = (subtract 1) $ length $ Set.fromList $ map (direction xy) locations
+    count xy = length $ fromList $ map (direction xy) positions
 
     direction (x, y) (x', y')
       | x == x' && y == y' = Center
@@ -39,10 +43,46 @@ part1 asteroids = maximum view
       | y == y' && x > x'  = Down
       | otherwise = Diag (signum (x-x')) (signum (y-y')) ((x-x') % (y-y'))
 
--- part2 :: [Int] -> Int
--- part2 = sum . map (sum . tail . takeWhile (>0) . iterate fuel)
+part1 :: [[Char]] -> Int
+part1 = (subtract 1) . fst . maximum . lineOfSight
+
+data Dir
+  = Self
+  | Above
+  | Rght (Ratio Int)
+  | Below
+  | Lft (Ratio Int)
+  deriving (Show, Eq, Ord)
+
+part2 :: [[Char]] -> Int
+part2 asteroids =
+    toInt $
+    (!!200) $
+    map snd $
+    concat $
+    transpose $
+    map (sortOn radLength) $
+    groupBy ((==) `on` fst) $
+    sort $
+    map (\(_, xy) -> (direction xy, xy)) $
+    positions
+  where
+    positions = lineOfSight asteroids
+    (sx, sy) = snd $ maximum $ positions
+
+    radLength (_, (x,y)) = abs (x - sx) + abs (y - sy)
+    toInt (x, y) = 100 * x + y
+
+    direction (x, y)
+      | x == sx && y == sy = Self
+      | x == sx && y < sy  = Above
+      | x == sx && y > sy  = Below
+      | x > sx = Rght ((y-sy) % (x-sx))
+      | x < sx = Lft ((y-sy) % (x-sx))
 
 ex0 = ".#..#\n.....\n#####\n....#\n...##"
 ex1 = "......#.#.\n#..#.#....\n..#######.\n.#.#.###..\n.#..#.....\n..#....#.#\n#..#....#.\n.##.#..###\n##...#..#.\n.#....####"
 ex2 = "#.#...#.#.\n.###....#.\n.#....#...\n##.#.#.#.#\n....#.#.#.\n.##..###.#\n..#...##..\n..##....##\n......#...\n.####.###."
 ex3 = ".#..#..###\n####.###.#\n....###.#.\n..###.##.#\n##.##.#.#.\n....###..#\n..#.#..#.#\n#..#.#.###\n.##...##.#\n.....#.#.."
+ex4 =".#..##.###...#######\n##.############..##.\n.#.######.########.#\n.###.#######.####.#.\n#####.##.#.##.###.##\n..#####..#.#########\n####################\n#.####....###.#.#.##\n##.#################\n#####.##.###..####..\n..######..##.#######\n####.##.####...##..#\n.#####..#.######.###\n##...#.##########...\n#.##########.#######\n.####.#.###.###.#.##\n....##.##.###..#####\n.#.#.###########.###\n#.#.#.#####.####.###\n###.##.####.##.#..##"
+ex5 = ".#....#####...#..\n##...##.#####..##\n##...#...#.#####.\n..#.....#...###..\n..#.#.....#....##"
