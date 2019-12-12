@@ -26,10 +26,8 @@ part2 = findCycles . iterate step
     step = map velocity . gravity
 
     findCycles :: [[Moon]] -> Int
-    findCycles m = xyzC
+    findCycles m = foldr1 lcm [xC, yC, zC]
       where
-        xyzC = div (xyC * zC) (gcd xyC zC)
-        xyC = div (xC * yC) (gcd xC yC)
         xC = cycleLength $ map (map (\(Moon (P x _ _) (V vx _ _)) -> (x, vx))) m
         yC = cycleLength $ map (map (\(Moon (P _ y _) (V _ vy _)) -> (y, vy))) m
         zC = cycleLength $ map (map (\(Moon (P _ _ z) (V _ _ vz)) -> (z, vz))) m
