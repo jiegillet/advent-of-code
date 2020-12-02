@@ -1,5 +1,7 @@
+-- {-# OPTIONS_GHC -Wall #-}
 module Day13 where
 
+import Data.List (scanl')
 import           Data.Map (Map)
 import qualified Data.Map as Map
 import           IntCode  (IntCode, getOutput, mkIntCode)
@@ -34,13 +36,16 @@ main = do
   ints <- read . (\i ->  "[" ++ i ++ "]") <$> readFile "Day13.txt"
   let intCode = mkIntCode ints
   print $ part1 intCode
+  print $ part2 ints
+  -- mapM_ print $ part2 ints
+  -- putStrLn $ part2 ints
   -- mapM_ putStrLn $ part2 ints
-  -- print $ part2 ints
 
 part1 :: IntCode -> Int
 part1 code = numBlocks $ foldr (uncurry Map.insert) Map.empty output
   where
     output = map parseOutput $ chunks 3 $ getOutput code []
+
     numBlocks = length . Map.filter (==Block)
 
 parseOutput :: [Integer] -> (Position, Tile)
@@ -50,22 +55,29 @@ parseOutput [x, y, 1]  = ((x, y), Wall)
 parseOutput [x, y, 2]  = ((x, y), Block)
 parseOutput [x, y, 3]  = ((x, y), Paddle)
 parseOutput [x, y, 4]  = ((x, y), Ball)
-parseOutput _          = error "Illegal output"
+parseOutput _          = error "Unexpected output"
 
 -- part2 :: [Integer] -> Int
--- part2 (_: ints) = undefined -- map render $ parseOutput Map.empty output
---   where
---     output = map parseOutput $ chunks 3 $ getOutput (mkIntCode (2: ints)) input
---
---     input = filter ((==Block) . snd)
---
---
---     beam = parseOutput output
---
---
---     parseOutput g (x:y:4:rest)    = let g' = update (x, y) 4 g in  g' : parseOutput g' rest
---     parseOutput g (x:y:tile:rest) = parseOutput (update (x, y) tile g) rest
---     input =  filter ((==4) . last) $ chuncks 2 output
+-- part2 :: [Integer] -> [(Position, Tile)]
+-- part2 [] = []
+part2 (_: ints) = -1 : nextMoves initPaddle (drop size output) -- map render $ drop size states -- $ drop size $ output
+  where
+    output = map parseOutput $ chunks 3 $ getOutput (mkIntCode (2: ints)) input
+    states = scanl' (flip $ uncurry Map.insert) Map.empty output
+
+    size = 43 * 21 + 1
+    initPaddle = fst $ fst $ head $ filter ((==Paddle) . snd) $ output
+
+    input =  0 : nextMoves initPaddle (drop size output)
+    nextMoves _ [] = []
+    nextMoves xp (((x, _), Ball):rest) = signum (x - xp) : nextMoves xp rest
+    nextMoves xp (_:rest) = nextMoves xp rest
+
+    -- nextMoves _ [] = []
+    -- nextMoves (xp, xb0) (xb : rest) =
+    --   let mv = if xp /= xb0 then 0 else signum (xb - xb0)
+    --   in mv: nextMoves (xp + mv, xb) rest
+
 
 render :: Map Position Tile -> String
 render g = unlines (map concat pixels ++ [score])
@@ -74,7 +86,7 @@ render g = unlines (map concat pixels ++ [score])
     (ymin, ymax) = (0, 20)
     pixels = [[ get (x, y) | x <- [xmin..xmax]] | y <- [ymin .. ymax]]
     get p = show $ Map.findWithDefault Empty p g
-    score = show $ Map.findWithDefault (Score 0) (-1, 0) g
+    score = show $ Map.findWithDefault (Score (-1)) (-1, 0) g
 
 chunks :: Int -> [a] -> [[a]]
 chunks _ [] = []
