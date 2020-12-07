@@ -1,12 +1,26 @@
 module Day07 where
 
-import Data.Graph
+import Control.Monad (foldM)
+import qualified Control.Monad.State as S
+import Data.Graph (graphFromEdges, reachable, transposeG)
+import qualified Data.Map as Map
 import Text.Parsec
+  ( Parsec,
+    digit,
+    many,
+    noneOf,
+    parse,
+    sepBy1,
+    sepEndBy1,
+    space,
+    string,
+    (<|>),
+  )
 
 main :: IO ()
 main = do
   rawRules <- readFile "Day07.txt"
-  --   let rawRules = ex
+  -- let rawRules = ex
   let Right rules = parse rulesP "rules" rawRules
   print $ part1 rules
   print $ part2 rules
@@ -15,12 +29,22 @@ part1 :: [Rule] -> Int
 part1 rules = length (reachable (transposeG graph) goal) - 1
   where
     Just goal = vertexFromKey "shiny gold"
-    (graph, nodeFromVertex, vertexFromKey) = graphFromEdges $ map (\(Rule x nodes) -> (x, x, map snd nodes)) rules
+    (graph, _, vertexFromKey) = graphFromEdges $ map (\(Rule x nodes) -> (x, x, map snd nodes)) rules
 
--- part2 :: [Rule] -> Int
-part2 rules = graph
+part2 :: [Rule] -> Int
+part2 rules = subtract 1 $ S.evalState (countBag "shiny gold") Map.empty
   where
-    [graph] = stronglyConnComp $ map (\(Rule x nodes) -> (x, x, map snd nodes)) rules
+    countBag :: String -> S.State (Map.Map String Int) Int
+    countBag bag = do
+      bags <- S.get
+      case Map.lookup bag bags of
+        Just n -> return n
+        Nothing -> case lookup bag (map (\(Rule x nodes) -> (x, nodes)) rules) of
+          Nothing -> return 1
+          Just nodes -> do
+            count <- foldM (\total (numBag, insideBag) -> (+ total) . (* numBag) <$> countBag insideBag) 1 nodes
+            S.modify (Map.insert bag count)
+            return count
 
 data Rule = Rule String [(Int, String)] deriving (Show)
 
