@@ -8,24 +8,24 @@ main = do
   print $ part1 numbers
   print $ part2 numbers
 
-part1 :: [Int] -> (Int, Int)
+part1 :: [Int] -> Int
 part1 n = isPairSum 0 (drop 25 n) n
   where
     isPairSum index (candidate : candidates) numbers
       | any (\n -> Set.member (candidate - n) set) numbers = isPairSum (index + 1) candidates (tail numbers)
-      | otherwise = (index, candidate)
+      | otherwise = candidate
       where
         set = Set.fromList $ take 25 numbers
 
--- part2 :: [Int] -> Int
+part2 :: [Int] -> Int
 part2 numbers = go numbers
   where
-    (_, invalid) = part1 numbers
-    go (smallest : rest)
+    invalid = part1 numbers
+    go (low : rest)
       | sum < invalid = go rest
-      | otherwise = (smallest, biggest)
+      | otherwise = minimum block + maximum block
       where
-        (biggest, sum) = check smallest smallest rest
-        check sum big (n : ns)
-          | sum + n > invalid = (big, sum)
-          | otherwise = check (sum + n) n ns
+        (block, sum) = check low [low] rest
+        check sum block (n : ns)
+          | sum + n > invalid = (block, sum)
+          | otherwise = check (sum + n) (n : block) ns
