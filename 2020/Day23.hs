@@ -3,15 +3,15 @@
 
 module Main where
 
-import Data.IntMap.Lazy ((!))
-import qualified Data.IntMap.Lazy as Map
+import Data.IntMap ((!))
+import qualified Data.IntMap as Map
 import Data.List (elemIndex, (\\))
 import Debug.Trace
 
 main :: IO ()
 main = do
-  --   let input = [8, 7, 2, 4, 9, 5, 1, 3, 6]
-  let input = [3, 8, 9, 1, 2, 5, 4, 6, 7]
+  let input = [8, 7, 2, 4, 9, 5, 1, 3, 6]
+  -- let input = [3, 8, 9, 1, 2, 5, 4, 6, 7]
   print $ part1 input
   print $ part2 input
 
@@ -31,16 +31,17 @@ part1 = format . fst . (!! 100) . iterate play . (\l -> (l, head l))
     format = concatMap show . takeWhile (/= 1) . tail . dropWhile (/= 1) . cycle
 
 part2 :: [Int] -> Int
-part2 cups = format $ undefined $ (!! 10_000_000) $ iterate play (cupToPos, posToCup, head cups)
+part2 = format . fst . (!! 10_000_000) . iterate play . initial . fill
   where
-    cupToPos = Map.union (Map.fromList $ zip cups [0 ..]) (Map.fromAscList $ zip [9 ..] [10 .. 1_000_000])
-    posToCup = Map.union (Map.fromList $ zip [0 ..] cups) (Map.fromAscList $ zip [10 .. 1_000_000] [9 ..])
-    play (cupToPos, posToCup, current) = undefined
+    fill = (++ [10 .. 1_000_000])
+    initial l = (Map.fromList $ zip l (tail $ cycle l), head l)
+    play (cups, current) = (cups', cups' ! current)
       where
-        cupMod n = if n == 0 then 1_000_000 else n
-        posMod n = if n >= 1_000_000 then n - 1_000_000 else n
-        removed = let pos = cupToPos ! current in map ((posToCup !) . posMod) [pos + 1, pos + 2, pos + 3]
-        destination = head $ filter (not . (`elem` removed)) $ tail $ iterate (cupMod . subtract 1) current
-        destinationPos = cupToPos ! destination
-
-    format = product . take 2 . tail . dropWhile (/= 1) . cycle
+        backTo9 n = if n == 0 then 1_000_000 else n
+        removed@[a, b, c] = take 3 $ tail $ iterate (cups !) current
+        destination = head $ filter (not . (`elem` removed)) $ tail $ iterate (backTo9 . subtract 1) current
+        cups' =
+          Map.insert current (cups ! c) $
+            Map.insert c (cups ! destination) $
+              Map.insert destination a cups
+    format cups = product $ take 2 $ tail $ iterate (cups !) 1
