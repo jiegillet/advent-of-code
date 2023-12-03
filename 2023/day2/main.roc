@@ -22,7 +22,6 @@ main =
 
 solve =
     input <- File.readUtf8 (Path.fromStr "../inputs/day2.txt") |> Task.await
-    
 
     part1 = solve1 input
     part2 = solve2 input
@@ -42,36 +41,28 @@ testInput =
 expect solve1 testInput == 8
 expect solve2 testInput == 2286
 
-Color : [Red, Green, Blue]
+emptyDraw = { red: 0, green: 0, blue: 0 }
+
+expect merge { red: 2, green: 0, blue: 3 } { red: 4, green: 0, blue: 1 } == { red: 4, green: 0, blue: 3 }
+
+merge = \a, b ->
+    { red: Num.max a.red b.red, green: Num.max a.green b.green, blue: Num.max a.blue b.blue }
 
 solve1 : Str -> Nat
 solve1 = \input ->
-    possible = \color, number ->
-        when color is
-            Red -> Dict.single (number <= 12) {}
-            Green -> Dict.single (number <= 13) {}
-            Blue -> Dict.single (number <= 14) {}
+    possible = \{ red, green, blue } ->
+        red <= 12 && green <= 13 && blue <= 14
 
-    merge = \a, b ->
-      Dict.walk a b (\dict, color, number ->  Dict.update dict color (add number))
+    possibleDrawId = \(id, draws) ->
+        poss =
+            draws
+            |> List.walk emptyDraw merge
+            |> possible
 
-    add = \number -> \value ->
-      when value is
-        Present n -> Present (Num.max n number)
-        Missing -> Present number
-
-    possibleDrawId = \(id, dicts) ->
-      poss =
-        dicts
-        |> List.walk (Dict.empty {}) merge
-        |> Dict.joinMap possible
-        |> Dict.contains Bool.false
-        |> Bool.not
-
-      if poss then id else 0
+        if poss then id else 0
 
     when String.parseStr gameP (Str.trim input) is
-        Err err -> 0
+        Err _ -> 0
         Ok lines ->
             lines
             |> List.map possibleDrawId
@@ -79,25 +70,19 @@ solve1 = \input ->
 
 solve2 : Str -> Nat
 solve2 = \input ->
-    merge = \a, b ->
-      Dict.walk a b (\dict, color, number ->  Dict.update dict color (add number))
+    value = \{ red, green, blue } ->
+        red * green * blue
 
-    add = \number -> \value ->
-      when value is
-        Present n -> Present (Num.max n number)
-        Missing -> Present number
-
-    possibleDrawId = \(_, dicts) ->
-        dicts
-        |> List.walk (Dict.empty {}) merge
-        |> Dict.values
-        |> List.product
+    drawValue = \(_, draws) ->
+        draws
+        |> List.walk emptyDraw merge
+        |> value
 
     when String.parseStr gameP (Str.trim input) is
-        Err err -> 0
+        Err _ -> 0
         Ok lines ->
             lines
-            |> List.map possibleDrawId
+            |> List.map drawValue
             |> List.sum
 
 # Parser
@@ -110,9 +95,9 @@ expect
     Ok (
         1,
         [
-            Dict.fromList [(Blue, 3), (Red, 4)],
-            Dict.fromList [(Red, 1), (Green, 2), (Blue, 6)],
-            Dict.fromList [(Green, 2)],
+            { red: 4, green: 0, blue: 3 },
+            { red: 1, green: 2, blue: 6 },
+            { red: 0, green: 2, blue: 0 },
         ],
     )
 
@@ -121,10 +106,11 @@ lineP =
     |> Core.keep gameIdP
     |> Core.keep (Core.sepBy drawP (String.string "; "))
 
-expect String.parseStr drawP "3 blue, 4 red" == Ok (Dict.fromList [(Blue, 3), (Red, 4)])
+expect String.parseStr drawP "3 blue, 4 red" == Ok { blue: 3, red: 4, green: 0 }
 
 drawP =
-    Core.sepBy countP (String.string ", ") |> Core.map Dict.fromList
+    Core.sepBy countP (String.string ", ")
+    |> Core.map (\colors -> List.walk colors emptyDraw (\draw, color -> color draw))
 
 expect String.parseStr gameIdP "Game 45: " == Ok 45
 
@@ -134,19 +120,15 @@ gameIdP =
     |> Core.keep (String.digits)
     |> Core.skip (String.string ": ")
 
-expect String.parseStr countP "2 blue" == Ok (Blue, 2)
-
 countP =
-    Core.const (\n -> \color -> (color, n))
+    Core.const (\n -> \color -> color n)
     |> Core.keep (String.digits)
     |> Core.skip (String.string " ")
     |> Core.keep colorP
 
-expect String.parseStr colorP "blue" == Ok Blue
-
 colorP =
     Core.oneOf [
-        String.string "red" |> Core.map (\_ -> Red),
-        String.string "green" |> Core.map (\_ -> Green),
-        String.string "blue" |> Core.map (\_ -> Blue),
+        String.string "red" |> Core.map (\_ -> \value -> \draw -> { draw & red: value }),
+        String.string "green" |> Core.map (\_ -> \value -> \draw -> { draw & green: value }),
+        String.string "blue" |> Core.map (\_ -> \value -> \draw -> { draw & blue: value }),
     ]
